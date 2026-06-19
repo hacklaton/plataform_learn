@@ -8,7 +8,8 @@ import {
   TrendingUp,
   Bell,
   LogOut,
-  ShieldAlert
+  ShieldAlert,
+  Sparkles
 } from 'lucide-react';
 
 export default function Sidebar() {
@@ -21,6 +22,7 @@ export default function Sidebar() {
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { name: 'Control Biométrico', path: '/attendance', icon: Video },
     { name: 'Gestión Académica', path: '/academic', icon: GraduationCap },
+    { name: 'Profesores IA', path: '/teacher', icon: Sparkles },
     { name: 'Análisis Predictivo', path: '/analytics', icon: TrendingUp },
     { name: 'Notificaciones', path: '/notifications', icon: Bell, badge: unreadCount },
   ];
