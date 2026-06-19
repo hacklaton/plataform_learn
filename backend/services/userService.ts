@@ -64,8 +64,8 @@ export class UserService {
     const safeUser = this.mapToSafeDto(user);
 
     // 4. Generate Tokens
-    const { token: accessToken } = JwtUtil.signAccessToken({ id: user.id, email: user.email, role: user.role });
-    const { token: refreshToken } = JwtUtil.signRefreshToken({ id: user.id, email: user.email, role: user.role });
+    const { token: accessToken } = JwtUtil.signAccessToken({ id: user.id, email: user.email, role: user.role as Role });
+    const { token: refreshToken } = JwtUtil.signRefreshToken({ id: user.id, email: user.email, role: user.role as Role });
 
     // 5. Store Refresh Token in Redis
     await redis.set(CacheKeys.refreshToken(user.id), refreshToken, 'EX', JWT.REFRESH_TTL_SEC);
@@ -96,8 +96,8 @@ export class UserService {
     const safeUser = this.mapToSafeDto(user);
 
     // 3. Generate Tokens
-    const { token: accessToken } = JwtUtil.signAccessToken({ id: user.id, email: user.email, role: user.role });
-    const { token: refreshToken } = JwtUtil.signRefreshToken({ id: user.id, email: user.email, role: user.role });
+    const { token: accessToken } = JwtUtil.signAccessToken({ id: user.id, email: user.email, role: user.role as Role });
+    const { token: refreshToken } = JwtUtil.signRefreshToken({ id: user.id, email: user.email, role: user.role as Role });
 
     // 4. Store Refresh Token in Redis
     await redis.set(CacheKeys.refreshToken(user.id), refreshToken, 'EX', JWT.REFRESH_TTL_SEC);
@@ -191,7 +191,7 @@ export class UserService {
       throw error;
     }
 
-    const updatedUser = await UserRepository.update(userId, user.role, data);
+    const updatedUser = await UserRepository.update(userId, user.role as Role, data);
     const safeUser = this.mapToSafeDto(updatedUser);
 
     // Clear cache
@@ -235,7 +235,7 @@ export class UserService {
       throw error;
     }
 
-    await UserRepository.update(userId, user.role, { isActive: false });
+    await UserRepository.update(userId, user.role as Role, { isActive: false });
 
     // Clean cache and session
     await redis.del(CacheKeys.user(userId));

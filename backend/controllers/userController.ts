@@ -37,7 +37,7 @@ export class UserController {
   static async getUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const user = await UserService.getUserById(id);
+      const user = await UserService.getUserById(id as string);
       ResponseUtil.success(res, user, HTTP.OK);
     } catch (error: any) {
       next(error);
@@ -47,7 +47,7 @@ export class UserController {
   static async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      const updated = await UserService.updateProfile(id, req.body);
+      const updated = await UserService.updateProfile(id as string, req.body);
       ResponseUtil.success(res, updated, HTTP.OK);
     } catch (error: any) {
       next(error);
@@ -67,7 +67,7 @@ export class UserController {
   static async deactivateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
       const { id } = req.params;
-      await UserService.deactivateUser(id);
+      await UserService.deactivateUser(id as string);
       ResponseUtil.success(res, { message: 'User deactivated successfully' }, HTTP.OK);
     } catch (error: any) {
       next(error);
