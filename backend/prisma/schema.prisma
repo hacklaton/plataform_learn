@@ -14,6 +14,18 @@ enum Role {
   GUARDIAN
 }
 
+enum TopicDifficulty {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+enum TopicStatus {
+  SUGERIDO
+  SELECCIONADO
+  DESCARTADO
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -62,4 +74,34 @@ model GuardianProfile {
   lastName  String
   phone     String?
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeacherWorkflow {
+  id                      String                @id @default(uuid())
+  teacherId               String
+  profesor                String
+  asignatura              String
+  curso                   String
+  contexto                String
+  objetivos               String[]
+  planResumen             String
+  planDuracionSemanas     Int
+  planEtapas              String[]
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  abanicoDeTemas          TeacherWorkflowTopic[]
+
+  @@index([teacherId])
+}
+
+model TeacherWorkflowTopic {
+  id          String          @id @default(uuid())
+  workflowId  String
+  titulo      String
+  descripcion String
+  dificultad  TopicDifficulty
+  estado      TopicStatus     @default(SUGERIDO)
+  workflow    TeacherWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
 }

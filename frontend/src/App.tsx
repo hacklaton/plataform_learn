@@ -13,6 +13,7 @@ import Biometric from './pages/Biometric';
 import Academic from './pages/Academic';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
+import Teacher from './pages/Teacher';
 
 // UI Atoms
 import LoadingSpinner from './components/ui/LoadingSpinner';
@@ -58,6 +59,7 @@ function AppContent() {
         <Route path="dashboard" element={<Dashboard />} />
         <Route path="attendance" element={<Biometric />} />
         <Route path="academic" element={<Academic />} />
+        <Route path="teacher" element={<Teacher />} />
         <Route path="analytics" element={<Analytics />} />
         <Route path="notifications" element={<Notifications />} />
       </Route>

@@ -7,6 +7,7 @@ import { prisma } from './libs/prisma.js';
 import { redis } from './libs/redis.js';
 import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import teacherWorkflowRoutes from './routes/teacherWorkflowRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 dotenv.config();
@@ -23,6 +24,7 @@ app.use(express.json());
 // Routes
 app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
+app.use('/teacher-workflows', teacherWorkflowRoutes);
 
 // Basic welcome route
 app.get('/', (req, res) => {
