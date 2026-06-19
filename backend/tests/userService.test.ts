@@ -1,15 +1,32 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { UserService } from '../services/userService.js';
-import { prisma } from '../libs/prisma.js';
+import { UserRepository } from '../repositories/user.repository.js';
+import { HashUtil } from '../utils/hash.util.js';
+import { JwtUtil } from '../utils/jwt.util.js';
 import { redis } from '../libs/redis.js';
+import { Role } from '../constants/roles.js';
 
-// Mock connection singletons
-vi.mock('../libs/prisma.js', () => ({
-  prisma: {
-    user: {
-      create: vi.fn(),
-      findUnique: vi.fn(),
-    },
+// Mock connections and utilities
+vi.mock('../repositories/user.repository.js', () => ({
+  UserRepository: {
+    findByEmail: vi.fn(),
+    create: vi.fn(),
+    findById: vi.fn(),
+  },
+}));
+
+vi.mock('../utils/hash.util.js', () => ({
+  HashUtil: {
+    hashPassword: vi.fn(),
+    comparePassword: vi.fn(),
+  },
+}));
+
+vi.mock('../utils/jwt.util.js', () => ({
+  JwtUtil: {
+    signAccessToken: vi.fn(),
+    signRefreshToken: vi.fn(),
+    verifyRefreshToken: vi.fn(),
   },
 }));
 
@@ -17,85 +34,83 @@ vi.mock('../libs/redis.js', () => ({
   redis: {
     get: vi.fn(),
     set: vi.fn(),
+    del: vi.fn(),
   },
 }));
 
-describe('UserService (Cache-Aside pattern logic)', () => {
+describe('UserService Unit Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  const mockUser = {
+  const mockDbUser = {
     id: 'user_123',
     email: 'test@example.com',
-    name: 'Test User',
+    password: 'hashed_password',
+    role: Role.STUDENT,
+    isActive: true,
     createdAt: new Date(),
     updatedAt: new Date(),
+    studentProfile: {
+      firstName: 'Sofía',
+      lastName: 'Gómez',
+      enrollmentCode: 'STU-001',
+    },
   };
 
-  describe('createUser', () => {
-    it('should create user in DB and cache it immediately in Redis', async () => {
-      vi.mocked(prisma.user.create).mockResolvedValueOnce(mockUser);
-      vi.mocked(redis.set).mockResolvedValueOnce('OK');
+  describe('register', () => {
+    it('should register a new student and return user safe dto + tokens', async () => {
+      vi.mocked(UserRepository.findByEmail).mockResolvedValueOnce(null);
+      vi.mocked(HashUtil.hashPassword).mockResolvedValueOnce('hashed_password');
+      vi.mocked(UserRepository.create).mockResolvedValueOnce(mockDbUser as any);
+      vi.mocked(JwtUtil.signAccessToken).mockReturnValueOnce({ token: 'access_token_123', jti: 'jti_a' });
+      vi.mocked(JwtUtil.signRefreshToken).mockReturnValueOnce({ token: 'refresh_token_123', jti: 'jti_b' });
+      vi.mocked(redis.set).mockResolvedValue('OK');
 
-      const result = await UserService.createUser('test@example.com', 'Test User');
-
-      expect(result).toEqual(mockUser);
-      expect(prisma.user.create).toHaveBeenCalledWith({
-        data: { email: 'test@example.com', name: 'Test User' },
+      const result = await UserService.register({
+        email: 'test@example.com',
+        passwordHash: 'Test1234!',
+        role: Role.STUDENT,
+        firstName: 'Sofía',
+        lastName: 'Gómez',
+        enrollmentCode: 'STU-001',
       });
-      expect(redis.set).toHaveBeenCalledWith(
-        'user:user_123',
-        JSON.stringify(mockUser),
-        'EX',
-        60
-      );
+
+      expect(result.tokens.accessToken).toBe('access_token_123');
+      expect(result.tokens.refreshToken).toBe('refresh_token_123');
+      expect(result.user.id).toBe('user_123');
+      expect(result.user.profile.enrollmentCode).toBe('STU-001');
+      expect(UserRepository.create).toHaveBeenCalled();
+    });
+
+    it('should throw conflict error if email exists', async () => {
+      vi.mocked(UserRepository.findByEmail).mockResolvedValueOnce(mockDbUser as any);
+
+      await expect(
+        UserService.register({
+          email: 'test@example.com',
+          passwordHash: 'Test1234!',
+          role: Role.STUDENT,
+          firstName: 'Sofía',
+          lastName: 'Gómez',
+          enrollmentCode: 'STU-001',
+        })
+      ).rejects.toThrow('A user with this email already exists');
     });
   });
 
-  describe('getUserById', () => {
-    it('should return user from Redis cache directly on cache HIT', async () => {
-      vi.mocked(redis.get).mockResolvedValueOnce(JSON.stringify(mockUser));
+  describe('login', () => {
+    it('should login valid user and return tokens', async () => {
+      vi.mocked(UserRepository.findByEmail).mockResolvedValueOnce(mockDbUser as any);
+      vi.mocked(HashUtil.comparePassword).mockResolvedValueOnce(true);
+      vi.mocked(JwtUtil.signAccessToken).mockReturnValueOnce({ token: 'access_token_123', jti: 'jti_a' });
+      vi.mocked(JwtUtil.signRefreshToken).mockReturnValueOnce({ token: 'refresh_token_123', jti: 'jti_b' });
+      vi.mocked(redis.set).mockResolvedValue('OK');
 
-      const result = await UserService.getUserById('user_123');
+      const result = await UserService.login('test@example.com', 'Test1234!');
 
-      expect(result).toEqual({ user: JSON.parse(JSON.stringify(mockUser)), source: 'cache' });
-      expect(redis.get).toHaveBeenCalledWith('user:user_123');
-      expect(prisma.user.findUnique).not.toHaveBeenCalled();
-    });
-
-    it('should query DB and set cache in Redis on cache MISS', async () => {
-      vi.mocked(redis.get).mockResolvedValueOnce(null);
-      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(mockUser);
-      vi.mocked(redis.set).mockResolvedValueOnce('OK');
-
-      const result = await UserService.getUserById('user_123');
-
-      expect(result).toEqual({ user: mockUser, source: 'database' });
-      expect(redis.get).toHaveBeenCalledWith('user:user_123');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'user_123' },
-      });
-      expect(redis.set).toHaveBeenCalledWith(
-        'user:user_123',
-        JSON.stringify(mockUser),
-        'EX',
-        60
-      );
-    });
-
-    it('should return null and not cache if user does not exist in DB on cache MISS', async () => {
-      vi.mocked(redis.get).mockResolvedValueOnce(null);
-      vi.mocked(prisma.user.findUnique).mockResolvedValueOnce(null);
-
-      const result = await UserService.getUserById('user_123');
-
-      expect(result).toEqual({ user: null, source: 'database' });
-      expect(redis.get).toHaveBeenCalledWith('user:user_123');
-      expect(prisma.user.findUnique).toHaveBeenCalledWith({
-        where: { id: 'user_123' },
-      });
-      expect(redis.set).not.toHaveBeenCalled();
+      expect(result.tokens.accessToken).toBe('access_token_123');
+      expect(result.user.email).toBe('test@example.com');
     });
   });
 });
