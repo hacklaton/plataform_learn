@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { TeacherWorkflowService } from '../services/teacherWorkflowService.js';
 import { ResponseUtil } from '../utils/response.util.js';
+import { TopicStatus } from '../interfaces/teacherWorkflow.interface.js';
 import { HTTP } from '../constants/httpStatus.js';
 
 export class TeacherWorkflowController {
@@ -26,8 +27,8 @@ export class TeacherWorkflowController {
 
   static async updateTopicStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { topicId } = req.params;
-      const { estado } = req.body;
+      const topicId = String(req.params.topicId);
+      const estado = req.body.estado as TopicStatus;
       const workflow = await TeacherWorkflowService.updateTopicStatus(topicId, estado);
       ResponseUtil.success(res, workflow, HTTP.OK);
     } catch (error: any) {
