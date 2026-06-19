@@ -14,6 +14,31 @@ enum Role {
   GUARDIAN
 }
 
+enum TopicDifficulty {
+  BASICO
+  INTERMEDIO
+  AVANZADO
+}
+
+enum TopicStatus {
+  SUGERIDO
+  SELECCIONADO
+  DESCARTADO
+}
+
+enum Level {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum PlanStatus {
+  DRAFT
+  TOPICS_SUGGESTED
+  TEACHER_REVIEW
+  FINALIZED
+}
+
 model User {
   id              String           @id @default(uuid())
   email           String           @unique
@@ -37,22 +62,25 @@ model AdminProfile {
 }
 
 model TeacherProfile {
-  id         String  @id @default(uuid())
-  userId     String  @unique
-  firstName  String
-  lastName   String
-  department String?
-  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id              String                  @id @default(uuid())
+  userId          String                  @unique
+  firstName       String
+  lastName        String
+  department      String?
+  user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  courses         Course[]
+  topicSelections TeacherTopicSelection[]
 }
 
 model StudentProfile {
-  id             String  @id @default(uuid())
-  userId         String  @unique
+  id             String             @id @default(uuid())
+  userId         String             @unique
   firstName      String
   lastName       String
-  enrollmentCode String  @unique
+  enrollmentCode String             @unique
   grade          String?
-  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  enrollments    CourseEnrollment[]
 }
 
 model GuardianProfile {
@@ -62,4 +90,111 @@ model GuardianProfile {
   lastName  String
   phone     String?
   user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeacherWorkflow {
+  id                      String                @id @default(uuid())
+  teacherId               String
+  profesor                String
+  asignatura              String
+  curso                   String
+  contexto                String
+  objetivos               String[]
+  planResumen             String
+  planDuracionSemanas     Int
+  planEtapas              String[]
+  createdAt               DateTime              @default(now())
+  updatedAt               DateTime              @updatedAt
+  abanicoDeTemas          TeacherWorkflowTopic[]
+
+  @@index([teacherId])
+}
+
+model TeacherWorkflowTopic {
+  id          String          @id @default(uuid())
+  workflowId  String
+  titulo      String
+  descripcion String
+  dificultad  TopicDifficulty
+  estado      TopicStatus     @default(SUGERIDO)
+  workflow    TeacherWorkflow @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+
+  @@index([workflowId])
+}
+
+// ============================================================
+// COURSE PLANNING MODELS — "The Intelligence" Agent
+// ============================================================
+
+model Course {
+  id             String             @id @default(uuid())
+  title          String
+  description    String?
+  durationMonths Int
+  targetLevel    Level              @default(BEGINNER)
+  subject        String
+  teacherId      String
+  teacher        TeacherProfile     @relation(fields: [teacherId], references: [id])
+  plan           CoursePlan?
+  enrollments    CourseEnrollment[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+}
+
+model CoursePlan {
+  id        String     @id @default(uuid())
+  courseId  String     @unique
+  course    Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  rawPlan   Json
+  status    PlanStatus @default(DRAFT)
+  weeks     PlanWeek[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+model PlanWeek {
+  id         String   @id @default(uuid())
+  planId     String
+  plan       CoursePlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+  weekNumber Int
+  title      String
+  objectives String[]
+  topics     Topic[]
+  createdAt  DateTime @default(now())
+}
+
+model Topic {
+  id             String                  @id @default(uuid())
+  weekId         String
+  week           PlanWeek                @relation(fields: [weekId], references: [id], onDelete: Cascade)
+  title          String
+  description    String
+  estimatedHours Float
+  resources      String[]
+  isSelected     Boolean                 @default(false)
+  selections     TeacherTopicSelection[]
+  createdAt      DateTime                @default(now())
+}
+
+model TeacherTopicSelection {
+  id         String         @id @default(uuid())
+  topicId    String
+  topic      Topic          @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  teacherId  String
+  teacher    TeacherProfile @relation(fields: [teacherId], references: [id])
+  notes      String?
+  selectedAt DateTime       @default(now())
+
+  @@unique([topicId, teacherId])
+}
+
+model CourseEnrollment {
+  id         String         @id @default(uuid())
+  courseId   String
+  course     Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  studentId  String
+  student    StudentProfile @relation(fields: [studentId], references: [id])
+  enrolledAt DateTime       @default(now())
+
+  @@unique([courseId, studentId])
 }

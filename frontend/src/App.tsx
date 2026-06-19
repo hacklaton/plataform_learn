@@ -14,6 +14,7 @@ import Biometric from './pages/Biometric';
 import Academic from './pages/Academic';
 import Analytics from './pages/Analytics';
 import Notifications from './pages/Notifications';
+import Teacher from './pages/Teacher';
 
 // Student pages
 import StudentAcademic from './pages/Student/Academic';
