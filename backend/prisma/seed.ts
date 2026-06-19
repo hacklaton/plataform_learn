@@ -6,9 +6,17 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Seed started...');
 
-  // Clean old records
+  // Clean old records in correct order of dependency
+  await prisma.courseEnrollment.deleteMany({});
+  await prisma.teacherTopicSelection.deleteMany({});
+  await prisma.topic.deleteMany({});
+  await prisma.planWeek.deleteMany({});
+  await prisma.coursePlan.deleteMany({});
+  await prisma.course.deleteMany({});
+  await prisma.teacherWorkflowTopic.deleteMany({});
+  await prisma.teacherWorkflow.deleteMany({});
   await prisma.user.deleteMany({});
-  console.log('Cleaned old user records.');
+  console.log('Cleaned old user and course records.');
 
   const hashedPassword = await bcrypt.hash('Test1234!', 12);
 
