@@ -9,6 +9,9 @@ import userRoutes from './routes/userRoutes.js';
 import authRoutes from './routes/authRoutes.js';
 import teacherWorkflowRoutes from './routes/teacherWorkflowRoutes.js';
 import courseRoutes from './routes/courseRoutes.js';
+import gradeRoutes from './routes/gradeRoutes.js';
+import studentRoutes from './routes/studentRoutes.js';
+import teacherRoutes from './routes/teacherRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 dotenv.config();
@@ -27,6 +30,9 @@ app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 app.use('/teacher-workflows', teacherWorkflowRoutes);
 app.use('/courses', courseRoutes);
+app.use('/grades', gradeRoutes);
+app.use('/students', studentRoutes);
+app.use('/teachers', teacherRoutes);
 
 // Basic welcome route
 app.get('/', (req, res) => {

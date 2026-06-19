@@ -18,6 +18,8 @@ import {
   Sparkles,
   Lightbulb,
   BookOpen,
+  Users,
+  UserCog,
   LucideIcon,
 } from 'lucide-react';
 
@@ -64,12 +66,19 @@ export default function Sidebar() {
     { name: 'Refuerzo Inteligente', path: '/student/reinforcement', icon: Lightbulb },
   ];
 
+  // CRUDs administrativos (solo ADMIN)
+  const adminItems: MenuItem[] = [
+    { name: 'Alumnos (CRUD)', path: '/admin/students', icon: Users },
+    { name: 'Profesores (CRUD)', path: '/admin/teachers', icon: UserCog },
+    { name: 'Salones (CRUD)', path: '/admin/classrooms', icon: DoorOpen },
+  ];
+
   const commonItems: MenuItem[] = [
     { name: 'Notificaciones', path: '/notifications', icon: Bell, badge: unreadCount },
   ];
 
   let primaryItems: MenuItem[] = [];
-  if (isAdmin) primaryItems = [...teacherItems, ...studentItems];
+  if (isAdmin) primaryItems = [...teacherItems, ...studentItems, ...adminItems];
   else if (isTeacher) primaryItems = teacherItems;
   else if (isStudent) primaryItems = studentItems;
 

@@ -16,12 +16,26 @@ import {
   selectTopic,
   finalizePlan,
   suggestTopics,
+  listAllCourses,
+  createSimpleCourse,
+  editCourse,
+  removeCourse,
+  enrollStudentInCourse,
+  unenrollStudentFromCourse,
 } from '../controllers/courseController.js';
 
 const router = Router();
 
 // Todas las rutas requieren autenticación
 router.use(authenticate);
+
+// ── CRUD administrativo de Salones (rutas estáticas ANTES de /:id) ────────────
+
+// GET /courses/all — todos los salones del sistema (ADMIN)
+router.get('/all', authorize(Role.ADMIN), listAllCourses);
+
+// POST /courses/simple — crea un salón sin invocar al agente IA
+router.post('/simple', authorize(Role.TEACHER, Role.ADMIN), createSimpleCourse);
 
 /**
  * POST /courses
@@ -80,6 +94,22 @@ router.post(
   authorize(Role.TEACHER, Role.ADMIN),
   suggestTopics,
 );
+
+// ── Update / Delete de Salones ────────────────────────────────────────────────
+
+// PATCH /courses/:id — editar datos del salón
+router.patch('/:id', authorize(Role.TEACHER, Role.ADMIN), editCourse);
+
+// DELETE /courses/:id — eliminar salón
+router.delete('/:id', authorize(Role.ADMIN), removeCourse);
+
+// ── Matrículas (enrollment) ───────────────────────────────────────────────────
+
+// POST /courses/:id/enroll  { studentId }
+router.post('/:id/enroll', authorize(Role.TEACHER, Role.ADMIN), enrollStudentInCourse);
+
+// DELETE /courses/:id/enroll/:studentId
+router.delete('/:id/enroll/:studentId', authorize(Role.TEACHER, Role.ADMIN), unenrollStudentFromCourse);
 
 export default router;
 
