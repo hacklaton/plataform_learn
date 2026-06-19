@@ -76,6 +76,7 @@ model TeacherProfile {
   user            User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   courses         Course[]
   topicSelections TeacherTopicSelection[]
+  gradesGiven     Grade[]
 }
 
 model StudentProfile {
@@ -87,6 +88,7 @@ model StudentProfile {
   grade          String?
   user           User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   enrollments    CourseEnrollment[]
+  grades         Grade[]
 }
 
 model GuardianProfile {
@@ -143,6 +145,7 @@ model Course {
   teacher        TeacherProfile     @relation(fields: [teacherId], references: [id])
   plan           CoursePlan?
   enrollments    CourseEnrollment[]
+  grades         Grade[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 }
@@ -206,6 +209,28 @@ model CourseEnrollment {
 }
 
 // ============================================================
+// GRADES — "Notas" registradas por el profesor
+// ============================================================
+
+model Grade {
+  id             String         @id @default(uuid())
+  studentId      String
+  student        StudentProfile @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  courseId       String
+  course         Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  teacherId      String
+  teacher        TeacherProfile @relation(fields: [teacherId], references: [id])
+  assessmentName String
+  value          Float
+  weight         Float          @default(100)
+  feedback       String?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([studentId])
+  @@index([courseId])
+  @@index([teacherId])
+}
 // BIOMETRIC AND ATTENDANCE MODELS
 // ============================================================
 

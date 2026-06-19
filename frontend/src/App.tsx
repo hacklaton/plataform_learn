@@ -25,6 +25,11 @@ import StudentAttendanceHistory from './pages/Student/AttendanceHistory';
 // Teacher/Admin pages
 import MonthlyAttendance from './pages/MonthlyAttendance';
 
+// Admin CRUD pages
+import AdminStudents from './pages/Admin/Students';
+import AdminTeachers from './pages/Admin/Teachers';
+import AdminClassrooms from './pages/Admin/Classrooms';
+
 // UI Atoms
 import LoadingSpinner from './components/ui/LoadingSpinner';
 
@@ -156,6 +161,32 @@ function AppContent() {
           element={
             <RoleGuard allow={['STUDENT']}>
               <StudentAttendanceHistory />
+            </RoleGuard>
+          }
+        />
+
+        {/* CRUDs administrativos (solo ADMIN vía RoleGuard) */}
+        <Route
+          path="admin/students"
+          element={
+            <RoleGuard allow={['ADMIN']}>
+              <AdminStudents />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="admin/teachers"
+          element={
+            <RoleGuard allow={['ADMIN']}>
+              <AdminTeachers />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="admin/classrooms"
+          element={
+            <RoleGuard allow={['ADMIN']}>
+              <AdminClassrooms />
             </RoleGuard>
           }
         />

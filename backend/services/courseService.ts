@@ -6,8 +6,15 @@
  */
 import { prisma } from '../libs/prisma.js';
 import type { Level, PlanStatus } from '@prisma/client';
+import { publishEvent, DOMAIN_EVENTS } from '../libs/events.js';
 
 const AGENT_URL = process.env.INTELLIGENCE_AGENT_URL ?? 'http://localhost:8000';
+
+function httpError(message: string, statusCode: number) {
+  const error: any = new Error(message);
+  error.statusCode = statusCode;
+  return error;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────
 
@@ -223,6 +230,107 @@ export async function suggestTopicsForWeek(courseId: string, weekNumber: number)
 
   if (!response.ok) throw new Error(`Error del agente: ${response.statusText}`);
   return response.json();
+}
+
+// ── CRUD de Salones (sin agente) ──────────────────────────────────────────────
+
+export interface SimpleCourseInput {
+  title: string;
+  subject: string;
+  durationMonths: number;
+  targetLevel: Level;
+  description?: string;
+  teacherId: string;
+}
+
+/**
+ * Crea un curso/salón directamente, SIN invocar al agente de planeación.
+ * Pensado para el CRUD administrativo donde no se requiere el plan IA.
+ */
+export async function createCourseSimple(input: SimpleCourseInput) {
+  const teacher = await prisma.teacherProfile.findUnique({ where: { id: input.teacherId } });
+  if (!teacher) throw httpError('Teacher profile not found', 404);
+
+  const course = await prisma.course.create({
+    data: {
+      title: input.title,
+      subject: input.subject,
+      durationMonths: input.durationMonths,
+      targetLevel: input.targetLevel,
+      description: input.description ?? '',
+      teacherId: input.teacherId,
+    },
+    include: { teacher: { select: { id: true, firstName: true, lastName: true } } },
+  });
+
+  await publishEvent(DOMAIN_EVENTS.COURSE_CREATED, {
+    courseId: course.id,
+    title: course.title,
+    teacherId: course.teacherId,
+  });
+
+  return course;
+}
+
+/**
+ * Lista todos los cursos del sistema (uso ADMIN).
+ */
+export async function getAllCourses() {
+  return prisma.course.findMany({
+    include: {
+      teacher: { select: { id: true, firstName: true, lastName: true } },
+      _count: { select: { enrollments: true, grades: true } },
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+}
+
+export async function updateCourse(
+  courseId: string,
+  data: { title?: string; subject?: string; description?: string; durationMonths?: number; targetLevel?: Level },
+) {
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (!course) throw httpError('Course not found', 404);
+
+  return prisma.course.update({
+    where: { id: courseId },
+    data,
+    include: { teacher: { select: { id: true, firstName: true, lastName: true } } },
+  });
+}
+
+export async function deleteCourse(courseId: string) {
+  const course = await prisma.course.findUnique({ where: { id: courseId } });
+  if (!course) throw httpError('Course not found', 404);
+
+  await prisma.course.delete({ where: { id: courseId } });
+  return { id: courseId, deleted: true };
+}
+
+/**
+ * Matricula a un alumno en un curso/salón.
+ */
+export async function enrollStudent(courseId: string, studentId: string) {
+  const [course, student] = await Promise.all([
+    prisma.course.findUnique({ where: { id: courseId } }),
+    prisma.studentProfile.findUnique({ where: { id: studentId } }),
+  ]);
+  if (!course) throw httpError('Course not found', 404);
+  if (!student) throw httpError('Student not found', 404);
+
+  return prisma.courseEnrollment.upsert({
+    where: { courseId_studentId: { courseId, studentId } },
+    update: {},
+    create: { courseId, studentId },
+    include: { student: { select: { id: true, firstName: true, lastName: true } } },
+  });
+}
+
+export async function unenrollStudent(courseId: string, studentId: string) {
+  await prisma.courseEnrollment
+    .delete({ where: { courseId_studentId: { courseId, studentId } } })
+    .catch(() => null);
+  return { courseId, studentId, removed: true };
 }
 
 async function callAgentGeneratePlan(payload: {

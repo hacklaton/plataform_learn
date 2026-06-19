@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { academicApi } from '../../../api/academic.api';
+import { gradesApi } from '../../../api/grades.api';
 import { attendanceApi } from '../../../api/attendance.api';
 import StatCard from '../../../components/ui/StatCard';
 import Card from '../../../components/ui/Card';
@@ -7,17 +7,18 @@ import Badge from '../../../components/ui/Badge';
 import LoadingSpinner from '../../../components/ui/LoadingSpinner';
 import { Award, CalendarCheck, Clock, BookOpen, GraduationCap } from 'lucide-react';
 
-// Estudiante demo: Mateo Vásquez (perfil en riesgo, ideal para la demo)
-const DEMO_STUDENT_ID = 'std-4';
+// Historial de asistencia biométrica: aún simulado (no hay modelo real todavía).
+const DEMO_ATTENDANCE_STUDENT_ID = 'std-4';
 
 export default function StudentAcademic() {
+  // Notas REALES: el backend filtra automáticamente a las del alumno autenticado.
   const { data: grades, isLoading: loadingGrades } = useQuery({
-    queryKey: ['student-grades', DEMO_STUDENT_ID],
-    queryFn: () => academicApi.getGrades(DEMO_STUDENT_ID),
+    queryKey: ['my-grades'],
+    queryFn: () => gradesApi.list(),
   });
 
   const { data: records, isLoading: loadingRecords } = useQuery({
-    queryKey: ['student-attendance', DEMO_STUDENT_ID],
+    queryKey: ['student-attendance', DEMO_ATTENDANCE_STUDENT_ID],
     queryFn: () => attendanceApi.getAttendanceRecords(),
   });
 
@@ -25,7 +26,7 @@ export default function StudentAcademic() {
     return <LoadingSpinner />;
   }
 
-  const myRecords = (records || []).filter((r) => r.studentId === DEMO_STUDENT_ID);
+  const myRecords = (records || []).filter((r) => r.studentId === DEMO_ATTENDANCE_STUDENT_ID);
   const tardyCount = myRecords.filter((r) => r.status === 'TARDY').length;
   const presentCount = myRecords.filter((r) => r.status === 'PRESENT').length;
   const totalRecords = myRecords.length || 1;
@@ -46,7 +47,7 @@ export default function StudentAcademic() {
             Mi Académico e Historial
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Notas actuales, actividades escolares e historial de asistencia alimentado por el sistema biométrico.
+            Notas actuales (en tiempo real) e historial de asistencia del sistema biométrico.
           </p>
         </div>
       </div>
@@ -78,7 +79,7 @@ export default function StudentAcademic() {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Notas actuales */}
+        {/* Notas actuales (reales) */}
         <Card className="space-y-4">
           <h3 className="text-base font-bold text-slate-100 font-display flex items-center gap-2">
             <BookOpen className="w-5 h-5 text-indigo-400" />
@@ -93,7 +94,7 @@ export default function StudentAcademic() {
                   className="p-3 bg-slate-900/30 border border-slate-800/40 rounded-xl flex justify-between gap-3 text-xs"
                 >
                   <div className="space-y-1">
-                    <p className="font-semibold text-slate-200">{grd.courseName}</p>
+                    <p className="font-semibold text-slate-200">{grd.course.title}</p>
                     <span className="text-[10px] text-slate-500">
                       {grd.assessmentName} ({grd.weight}%)
                     </span>
@@ -107,9 +108,11 @@ export default function StudentAcademic() {
                         grd.value < 3.0 ? 'text-rose-450' : 'text-indigo-400'
                       }`}
                     >
-                      {grd.value}
+                      {grd.value.toFixed(1)}
                     </span>
-                    <p className="text-[9px] text-slate-500">{grd.date}</p>
+                    <p className="text-[9px] text-slate-500">
+                      {new Date(grd.createdAt).toLocaleDateString('es-CO')}
+                    </p>
                   </div>
                 </div>
               ))

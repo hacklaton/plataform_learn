@@ -11,8 +11,35 @@ import {
   toggleTopicSelection,
   finalizeCourseplan,
   suggestTopicsForWeek,
+  createCourseSimple,
+  getAllCourses,
+  updateCourse,
+  deleteCourse,
+  enrollStudent,
+  unenrollStudent,
 } from '../services/courseService.js';
 import { prisma } from '../libs/prisma.js';
+import { Role } from '../constants/roles.js';
+
+/**
+ * Resuelve el teacherId (TeacherProfile.id) a usar:
+ * - ADMIN: puede indicar teacherId en el body; si no, error.
+ * - TEACHER: siempre su propio perfil.
+ */
+async function resolveTeacherId(req: Request): Promise<string> {
+  if (req.user!.role === Role.ADMIN) {
+    const teacherId = req.body.teacherId as string | undefined;
+    if (!teacherId) {
+      throw Object.assign(new Error('teacherId is required when creating as ADMIN'), { statusCode: 400 });
+    }
+    return teacherId;
+  }
+  const teacherProfile = await prisma.teacherProfile.findUnique({ where: { userId: req.user!.id } });
+  if (!teacherProfile) {
+    throw Object.assign(new Error('Teacher profile not found'), { statusCode: 403 });
+  }
+  return teacherProfile.id;
+}
 
 // ── POST /courses ────────────────────────────────────────────────────────────
 
@@ -256,6 +283,103 @@ export async function suggestTopics(req: Request, res: Response, next: NextFunct
       message: `Sugerencias generadas para la semana ${weekNumber}`,
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// ── CRUD administrativo de Salones (Course) ───────────────────────────────────
+
+// GET /courses/all — lista todos los salones (ADMIN)
+export async function listAllCourses(_req: Request, res: Response, next: NextFunction) {
+  try {
+    const courses = await getAllCourses();
+    res.json({ success: true, data: courses, total: courses.length });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// POST /courses/simple — crea un salón sin invocar al agente IA
+export async function createSimpleCourse(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { title, subject, durationMonths, targetLevel, description } = req.body;
+
+    if (!title || !subject || !durationMonths || !targetLevel) {
+      res.status(400).json({
+        success: false,
+        message: 'Campos requeridos: title, subject, durationMonths, targetLevel',
+      });
+      return;
+    }
+
+    const teacherId = await resolveTeacherId(req);
+    const course = await createCourseSimple({
+      title,
+      subject,
+      durationMonths: Number(durationMonths),
+      targetLevel,
+      description,
+      teacherId,
+    });
+
+    res.status(201).json({ success: true, data: course });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// PATCH /courses/:id
+export async function editCourse(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const { title, subject, description, durationMonths, targetLevel } = req.body;
+    const course = await updateCourse(id as string, {
+      title,
+      subject,
+      description,
+      durationMonths: durationMonths !== undefined ? Number(durationMonths) : undefined,
+      targetLevel,
+    });
+    res.json({ success: true, data: course });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// DELETE /courses/:id
+export async function removeCourse(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id } = req.params;
+    const result = await deleteCourse(id as string);
+    res.json({ success: true, data: result });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// POST /courses/:id/enroll  { studentId }
+export async function enrollStudentInCourse(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id: courseId } = req.params;
+    const { studentId } = req.body;
+    if (!studentId) {
+      res.status(400).json({ success: false, message: 'studentId is required' });
+      return;
+    }
+    const enrollment = await enrollStudent(courseId as string, studentId);
+    res.status(201).json({ success: true, data: enrollment });
+  } catch (error) {
+    next(error);
+  }
+}
+
+// DELETE /courses/:id/enroll/:studentId
+export async function unenrollStudentFromCourse(req: Request, res: Response, next: NextFunction) {
+  try {
+    const { id: courseId, studentId } = req.params;
+    const result = await unenrollStudent(courseId as string, studentId as string);
+    res.json({ success: true, data: result });
   } catch (error) {
     next(error);
   }
