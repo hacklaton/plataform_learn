@@ -1,7 +1,9 @@
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { academicApi } from '../../api/academic.api';
 import { notificationsApi } from '../../api/notifications.api';
 import { attendanceApi } from '../../api/attendance.api';
+import { iaApi } from '../../api/ia.api';
 import StatCard from '../../components/ui/StatCard';
 import Card from '../../components/ui/Card';
 import Badge from '../../components/ui/Badge';
@@ -11,9 +13,9 @@ import {
   CalendarCheck,
   AlertTriangle,
   BookOpen,
-  ArrowUpRight,
   ShieldCheck,
-  Clock
+  Clock,
+  DoorOpen
 } from 'lucide-react';
 import {
   AreaChart,
@@ -34,6 +36,21 @@ const CHART_DATA = [
 ];
 
 export default function Dashboard() {
+  const [searchParams] = useSearchParams();
+  const selectedClassroomId = searchParams.get('classroom');
+
+  const { data: classrooms } = useQuery({
+    queryKey: ['ia-classrooms'],
+    queryFn: () => iaApi.getClassrooms(),
+  });
+
+  const { data: dropoutProjections } = useQuery({
+    queryKey: ['dropout-projections', selectedClassroomId ?? 'all'],
+    queryFn: () => iaApi.getDropoutProjections(selectedClassroomId ?? undefined),
+  });
+
+  const selectedClassroom = classrooms?.find((c) => c.id === selectedClassroomId) ?? null;
+
   const { data: students, isLoading: loadingStudents } = useQuery({
     queryKey: ['students'],
     queryFn: () => academicApi.getStudents(),
@@ -78,10 +95,12 @@ export default function Dashboard() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-white tracking-tight font-display m-0">
-            Panel General
+            {selectedClassroom ? selectedClassroom.name : 'Panel General'}
           </h1>
           <p className="text-xs text-slate-400 mt-1">
-            Supervisión automatizada de inasistencias y riesgos mediante agentes inteligentes.
+            {selectedClassroom
+              ? `Datos filtrados del salón · ${selectedClassroom.courseCode} · ${selectedClassroom.studentCount} alumnos`
+              : 'Supervisión automatizada de inasistencias y riesgos mediante agentes inteligentes.'}
           </p>
         </div>
         <div className="text-xs font-semibold text-slate-450 bg-slate-900/40 border border-slate-800/80 px-3 py-1.5 rounded-lg flex items-center gap-2">
@@ -89,6 +108,26 @@ export default function Dashboard() {
           Actualizado: Hace unos instantes
         </div>
       </div>
+
+      {/* Banner de salón seleccionado */}
+      {selectedClassroom ? (
+        <Card className="flex items-center justify-between flex-wrap gap-4 py-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-indigo-600/15 rounded-xl text-indigo-300">
+              <DoorOpen className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="text-sm font-bold text-slate-100">{selectedClassroom.name}</h3>
+              <span className="text-[11px] text-slate-500">
+                Asistencia promedio {selectedClassroom.avgAttendance}% · Promedio {selectedClassroom.avgGpa}
+              </span>
+            </div>
+          </div>
+          <Badge variant={selectedClassroom.avgAttendance < 80 ? 'warning' : 'success'}>
+            {selectedClassroom.avgAttendance < 80 ? 'Requiere atención' : 'Salón estable'}
+          </Badge>
+        </Card>
+      ) : null}
 
       {/* KPI Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
@@ -133,7 +172,7 @@ export default function Dashboard() {
               Tendencia de Asistencia Semanal
             </h3>
             <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
-              Filtro: General
+              Filtro: {selectedClassroom ? selectedClassroom.name : 'General'}
             </span>
           </div>
 
@@ -284,7 +323,7 @@ export default function Dashboard() {
                 </div>
                 <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-indigo-500 to-purple-500 transition-all duration-500"
+                    className="h-full bg-linear-to-r from-indigo-500 to-purple-500 transition-all duration-500"
                     style={{ width: `${course.progress}%` }}
                   ></div>
                 </div>
@@ -293,6 +332,59 @@ export default function Dashboard() {
           </div>
         </Card>
       </div>
+
+      {/* Proyecciones de deserción del Agente de IA */}
+      <Card className="space-y-4">
+        <div className="flex justify-between items-center">
+          <h3 className="text-base font-bold text-slate-100 font-display flex items-center gap-2">
+            <AlertTriangle className="w-5 h-5 text-rose-450" />
+            Riesgo de Deserción (Agente Predictivo)
+          </h3>
+          <span className="text-[11px] font-semibold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded-full">
+            {selectedClassroom ? selectedClassroom.name : 'Todos los salones'}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {dropoutProjections && dropoutProjections.length > 0 ? (
+            dropoutProjections.map((proj) => (
+              <div
+                key={proj.id}
+                className="p-4 bg-slate-900/30 border border-slate-800/40 rounded-xl flex items-start justify-between gap-4 text-xs"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={proj.currentRisk.toLowerCase() as 'low' | 'moderate' | 'critical'}>
+                      {proj.currentRisk}
+                    </Badge>
+                    <span className="font-semibold text-slate-200">{proj.studentName}</span>
+                  </div>
+                  <p className="text-slate-400 leading-relaxed">{proj.primaryFactor}</p>
+                  <p className="text-[11px] text-indigo-300/80">→ {proj.recommendation}</p>
+                </div>
+                <div className="text-right shrink-0">
+                  <span
+                    className={`font-bold font-mono text-lg ${
+                      proj.dropoutProbability >= 70
+                        ? 'text-rose-450'
+                        : proj.dropoutProbability >= 45
+                        ? 'text-amber-400'
+                        : 'text-emerald-400'
+                    }`}
+                  >
+                    {proj.dropoutProbability}%
+                  </span>
+                  <p className="text-[9px] text-slate-500 uppercase">prob. deserción</p>
+                </div>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-slate-500 text-center py-6">
+              El agente no reporta riesgos de deserción para esta selección.
+            </p>
+          )}
+        </div>
+      </Card>
     </div>
   );
 }
