@@ -26,7 +26,7 @@ export class TeacherWorkflowController {
 
   static async updateTopicStatus(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { topicId } = req.params;
+      const topicId = req.params.topicId as string;
       const { estado } = req.body;
       const workflow = await TeacherWorkflowService.updateTopicStatus(topicId, estado);
       ResponseUtil.success(res, workflow, HTTP.OK);

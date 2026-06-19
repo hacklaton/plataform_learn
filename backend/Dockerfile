@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 # Install pnpm globally
 RUN npm install -g pnpm
@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml ./
 
 # Install all dependencies
-RUN pnpm install
+RUN pnpm install --ignore-scripts
 
 # Copy application files
 COPY . .

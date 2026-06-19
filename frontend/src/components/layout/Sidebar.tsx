@@ -53,6 +53,7 @@ export default function Sidebar() {
   // --- Construcción del menú según rol (ADMIN ve todo) ---
   const teacherItems: MenuItem[] = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Planificación IA', path: '/teacher', icon: Sparkles },
     { name: 'Análisis Predictivo', path: '/analytics', icon: TrendingUp },
     { name: 'Gestión Académica', path: '/academic', icon: GraduationCap },
     { name: 'Control Biométrico', path: '/attendance', icon: Video },

@@ -105,6 +105,14 @@ function AppContent() {
             </RoleGuard>
           }
         />
+        <Route
+          path="teacher"
+          element={
+            <RoleGuard allow={['TEACHER']}>
+              <Teacher />
+            </RoleGuard>
+          }
+        />
 
         {/* Módulos de estudiante (ADMIN también puede verlos) */}
         <Route
