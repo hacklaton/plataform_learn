@@ -64,6 +64,9 @@ services:
       - BACKEND_URL=http://hacklaton-api:3001
       - AGENT_PORT=8000
       - LOG_LEVEL=INFO
+      - FIFTYONE_PLUGINS_DIR=/app/plugins
+    volumes:
+      - ../../agent/plugins:/app/plugins
     depends_on:
       postgres:
         condition: service_healthy

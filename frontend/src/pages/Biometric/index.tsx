@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card';
 import Button from '../../components/ui/Button';
 import Badge from '../../components/ui/Badge';
 import LoadingSpinner from '../../components/ui/LoadingSpinner';
+import BiometricEnrollModal from '../../components/attendance/BiometricEnrollModal';
 import {
   Camera,
   VideoOff,
@@ -14,7 +15,9 @@ import {
   Activity,
   History,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  ScanFace,
+  AlertTriangle,
 } from 'lucide-react';
 
 export default function Biometric() {
@@ -23,6 +26,7 @@ export default function Biometric() {
   const [imgSrc, setImgSrc] = useState<string | null>(null);
   const [cameraActive, setCameraActive] = useState(true);
   const [scanResult, setScanResult] = useState<any>(null);
+  const [showEnroll, setShowEnroll] = useState(false);
 
   // Indicators quality mocks
   const [lighting, setLighting] = useState<'GOOD' | 'LOW'>('GOOD');
@@ -81,13 +85,22 @@ export default function Biometric() {
   return (
     <div className="space-y-6">
       {/* Page Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-white tracking-tight font-display m-0">
-          Percepción Biométrica
-        </h1>
-        <p className="text-xs text-slate-400 mt-1">
-          Escaneo facial en tiempo real para registro de asistencia libre de fraudes.
-        </p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white tracking-tight font-display m-0">
+            Percepción Biométrica
+          </h1>
+          <p className="text-xs text-slate-400 mt-1">
+            Escaneo facial en tiempo real para registro de asistencia libre de fraudes.
+          </p>
+        </div>
+        <button
+          onClick={() => setShowEnroll(true)}
+          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600/20 border border-indigo-500/40 text-indigo-300 text-sm font-medium hover:bg-indigo-600/30 transition-all shrink-0"
+        >
+          <ScanFace className="w-4 h-4" />
+          Registrar mi Rostro
+        </button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -167,30 +180,52 @@ export default function Biometric() {
               className={`border ${
                 scanResult.status === 'SUCCESS'
                   ? 'bg-emerald-950/15 border-emerald-500/30'
+                  : scanResult.status === 'MISMATCH' || scanResult.status === 'NO_FACE_REGISTERED'
+                  ? 'bg-amber-950/15 border-amber-500/30'
                   : 'bg-rose-950/15 border-rose-500/30'
               }`}
             >
               <div className="flex items-center gap-4">
                 <div
                   className={`p-3 rounded-xl shrink-0 ${
-                    scanResult.status === 'SUCCESS' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-rose-500/10 text-rose-450'
+                    scanResult.status === 'SUCCESS'
+                      ? 'bg-emerald-500/10 text-emerald-400'
+                      : scanResult.status === 'MISMATCH' || scanResult.status === 'NO_FACE_REGISTERED'
+                      ? 'bg-amber-500/10 text-amber-400'
+                      : 'bg-rose-500/10 text-rose-400'
                   }`}
                 >
                   {scanResult.status === 'SUCCESS' ? (
                     <UserCheck className="w-6 h-6" />
+                  ) : scanResult.status === 'MISMATCH' || scanResult.status === 'NO_FACE_REGISTERED' ? (
+                    <AlertTriangle className="w-6 h-6" />
                   ) : (
                     <AlertCircle className="w-6 h-6" />
                   )}
                 </div>
                 <div>
                   <h4 className="text-sm font-bold text-white font-display">
-                    {scanResult.status === 'SUCCESS' ? 'Rostro Identificado' : 'Rostro Desconocido'}
+                    {scanResult.status === 'SUCCESS'
+                      ? 'Rostro Identificado'
+                      : scanResult.status === 'MISMATCH'
+                      ? 'Acceso Denegado — Rostro No Coincide'
+                      : scanResult.status === 'NO_FACE_REGISTERED'
+                      ? 'Sin Datos Biométricos Registrados'
+                      : 'Rostro Desconocido'}
                   </h4>
                   <p className="text-xs text-slate-300 mt-0.5">
                     {scanResult.status === 'SUCCESS'
-                      ? `Estudiante ${scanResult.studentName} (${scanResult.studentCode}) marcado Presente con ${scanResult.confidence}% confianza.`
-                      : 'La red neuronal no pudo asociar este rostro con ningún registro académico activo.'}
+                      ? `${scanResult.studentName} (${scanResult.studentCode}) — Presente con ${scanResult.confidence}% confianza.`
+                      : scanResult.message ?? 'La red neuronal no pudo asociar este rostro con ningún registro académico activo.'}
                   </p>
+                  {scanResult.status === 'NO_FACE_REGISTERED' && (
+                    <button
+                      onClick={() => setShowEnroll(true)}
+                      className="mt-2 text-xs text-indigo-400 underline hover:text-indigo-300"
+                    >
+                      Registrar mi rostro ahora →
+                    </button>
+                  )}
                 </div>
               </div>
             </Card>
@@ -352,6 +387,9 @@ export default function Biometric() {
           </Card>
         </div>
       </div>
+
+      {/* Face Enrollment Modal */}
+      {showEnroll && <BiometricEnrollModal onClose={() => setShowEnroll(false)} />}
     </div>
   );
 }
