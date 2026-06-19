@@ -7,10 +7,59 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+  GUARDIAN
+}
+
 model User {
-  id        String   @id @default(uuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id              String           @id @default(uuid())
+  email           String           @unique
+  password        String
+  role            Role             @default(STUDENT)
+  isActive        Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  adminProfile    AdminProfile?
+  teacherProfile  TeacherProfile?
+  studentProfile  StudentProfile?
+  guardianProfile GuardianProfile?
+}
+
+model AdminProfile {
+  id        String @id @default(uuid())
+  userId    String @unique
+  firstName String
+  lastName  String
+  user      User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model TeacherProfile {
+  id         String  @id @default(uuid())
+  userId     String  @unique
+  firstName  String
+  lastName   String
+  department String?
+  user       User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model StudentProfile {
+  id             String  @id @default(uuid())
+  userId         String  @unique
+  firstName      String
+  lastName       String
+  enrollmentCode String  @unique
+  grade          String?
+  user           User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model GuardianProfile {
+  id        String  @id @default(uuid())
+  userId    String  @unique
+  firstName String
+  lastName  String
+  phone     String?
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

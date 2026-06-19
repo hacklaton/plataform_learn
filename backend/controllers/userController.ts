@@ -1,46 +1,76 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import { UserService } from '../services/userService.js';
+import { ResponseUtil } from '../utils/response.util.js';
+import { HTTP } from '../constants/httpStatus.js';
+import { Role } from '../constants/roles.js';
 
 export class UserController {
-  static async createUser(req: Request, res: Response): Promise<void> {
-    const { email, name } = req.body;
-
-    if (!email) {
-      res.status(400).json({ error: 'Email is required' });
-      return;
-    }
-
+  static async getAllUsers(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await UserService.createUser(email, name);
-      res.status(201).json(user);
-    } catch (error: any) {
-      if (error.code === 'P2002') {
-        res.status(400).json({ error: 'A user with this email already exists' });
-        return;
+      const { role, isActive } = req.query;
+      
+      const filters: any = {};
+      if (role && Object.values(Role).includes(role as Role)) {
+        filters.role = role as Role;
       }
-      res.status(500).json({ error: error.message || 'Internal Server Error' });
+      if (isActive !== undefined) {
+        filters.isActive = isActive === 'true';
+      }
+
+      const users = await UserService.getAllUsers(filters);
+      ResponseUtil.success(res, users, HTTP.OK);
+    } catch (error: any) {
+      next(error);
     }
   }
 
-  static async getUser(req: Request, res: Response): Promise<void> {
-    const { id } = req.params;
-
-    if (!id || typeof id !== 'string') {
-      res.status(400).json({ error: 'Valid User ID is required' });
-      return;
-    }
-
+  static async getProfile(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { user, source } = await UserService.getUserById(id);
-      if (!user) {
-        res.status(404).json({ error: 'User not found' });
-        return;
-      }
-      res.status(200).json({ user, source });
+      const userId = req.user!.id;
+      const profile = await UserService.getProfile(userId);
+      ResponseUtil.success(res, profile, HTTP.OK);
     } catch (error: any) {
-      res.status(500).json({ error: error.message || 'Internal Server Error' });
+      next(error);
+    }
+  }
+
+  static async getUserById(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const user = await UserService.getUserById(id);
+      ResponseUtil.success(res, user, HTTP.OK);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  static async updateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      const updated = await UserService.updateProfile(id, req.body);
+      ResponseUtil.success(res, updated, HTTP.OK);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  static async changePassword(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const userId = req.user!.id;
+      await UserService.changePassword(userId, req.body);
+      ResponseUtil.success(res, { message: 'Password updated successfully' }, HTTP.OK);
+    } catch (error: any) {
+      next(error);
+    }
+  }
+
+  static async deactivateUser(req: Request, res: Response, next: NextFunction): Promise<void> {
+    try {
+      const { id } = req.params;
+      await UserService.deactivateUser(id);
+      ResponseUtil.success(res, { message: 'User deactivated successfully' }, HTTP.OK);
+    } catch (error: any) {
+      next(error);
     }
   }
 }
-
-

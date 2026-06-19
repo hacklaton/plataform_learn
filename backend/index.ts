@@ -6,6 +6,8 @@ import dotenv from 'dotenv';
 import { prisma } from './libs/prisma.js';
 import { redis } from './libs/redis.js';
 import userRoutes from './routes/userRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 dotenv.config();
 
@@ -19,6 +21,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 
 // Routes
+app.use('/auth', authRoutes);
 app.use('/users', userRoutes);
 
 // Basic welcome route
@@ -61,6 +64,9 @@ app.get('/health', async (req, res) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+// Error handling middleware
+app.use(errorHandler);
 
 // Startup server
 if (process.env.NODE_ENV !== 'test') {
