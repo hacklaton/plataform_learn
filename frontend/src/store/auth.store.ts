@@ -7,7 +7,7 @@ interface AuthState {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  login: (email: string) => Promise<boolean>;
+  login: (email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   checkSession: () => Promise<void>;
 }
@@ -19,14 +19,18 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: false,
   error: null,
 
-  login: async (email: string) => {
+  login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const { user, token } = await authApi.login(email);
+      const { user, token } = await authApi.login(email, password);
       set({ user, token, isAuthenticated: true, isLoading: false });
       return true;
-    } catch (e) {
-      set({ error: (e as Error).message || 'Error al iniciar sesión', isLoading: false });
+    } catch (e: any) {
+      const message =
+        e?.response?.data?.error ??
+        e?.message ??
+        'Credenciales inválidas. Verifica tu correo y contraseña.';
+      set({ error: message, isLoading: false });
       return false;
     }
   },
@@ -35,9 +39,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ isLoading: true });
     try {
       await authApi.logout();
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
-    } catch (e) {
-      set({ error: 'Error al cerrar sesión', isLoading: false });
+    } finally {
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false, error: null });
     }
   },
 
@@ -51,10 +54,11 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const user = await authApi.getProfile();
       set({ user, token, isAuthenticated: true, isLoading: false });
-    } catch (e) {
+    } catch {
       localStorage.removeItem('auth_token');
-      localStorage.removeItem('auth_user_id');
+      localStorage.removeItem('auth_refresh_token');
+      localStorage.removeItem('auth_user');
       set({ user: null, token: null, isAuthenticated: false, isLoading: false, error: 'Sesión expirada' });
     }
-  }
+  },
 }));
