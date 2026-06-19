@@ -10,7 +10,7 @@ WORKDIR /app
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 # Install all dependencies
-RUN pnpm install
+RUN pnpm install --ignore-scripts
 
 # Copy application files
 COPY . .

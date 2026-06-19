@@ -20,6 +20,7 @@ import {
   BookOpen,
   Users,
   UserCog,
+  CalendarDays,
   LucideIcon,
 } from 'lucide-react';
 
@@ -55,15 +56,18 @@ export default function Sidebar() {
   // --- Construcción del menú según rol (ADMIN ve todo) ---
   const teacherItems: MenuItem[] = [
     { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { name: 'Planificación IA', path: '/teacher', icon: Sparkles },
     { name: 'Análisis Predictivo', path: '/analytics', icon: TrendingUp },
     { name: 'Gestión Académica', path: '/academic', icon: GraduationCap },
     { name: 'Control Biométrico', path: '/attendance', icon: Video },
+    { name: 'Asistencia Mensual', path: '/attendance/monthly', icon: CalendarDays },
   ];
 
   const studentItems: MenuItem[] = [
     { name: 'Mi Académico e Historial', path: '/student/academic', icon: BookOpen },
     { name: 'Predicción de Rutina', path: '/student/routine', icon: Sparkles },
     { name: 'Refuerzo Inteligente', path: '/student/reinforcement', icon: Lightbulb },
+    { name: 'Mi Asistencia', path: '/student/attendance', icon: CalendarDays },
   ];
 
   // CRUDs administrativos (solo ADMIN)
@@ -87,7 +91,7 @@ export default function Sidebar() {
 
   const renderItem = (item: MenuItem) => {
     const Icon = item.icon;
-    const isActive = location.pathname === item.path && !location.search.includes('classroom');
+    const isActive = location.pathname.startsWith(item.path) && !location.search.includes('classroom');
     return (
       <Link
         key={item.path}

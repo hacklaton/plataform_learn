@@ -20,6 +20,10 @@ import Teacher from './pages/Teacher';
 import StudentAcademic from './pages/Student/Academic';
 import RoutinePrediction from './pages/Student/RoutinePrediction';
 import Reinforcement from './pages/Student/Reinforcement';
+import StudentAttendanceHistory from './pages/Student/AttendanceHistory';
+
+// Teacher/Admin pages
+import MonthlyAttendance from './pages/MonthlyAttendance';
 
 // Admin CRUD pages
 import AdminStudents from './pages/Admin/Students';
@@ -110,6 +114,22 @@ function AppContent() {
             </RoleGuard>
           }
         />
+        <Route
+          path="teacher"
+          element={
+            <RoleGuard allow={['TEACHER']}>
+              <Teacher />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="attendance/monthly"
+          element={
+            <RoleGuard allow={['TEACHER']}>
+              <MonthlyAttendance />
+            </RoleGuard>
+          }
+        />
 
         {/* Módulos de estudiante (ADMIN también puede verlos) */}
         <Route
@@ -133,6 +153,14 @@ function AppContent() {
           element={
             <RoleGuard allow={['STUDENT']}>
               <Reinforcement />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="student/attendance"
+          element={
+            <RoleGuard allow={['STUDENT']}>
+              <StudentAttendanceHistory />
             </RoleGuard>
           }
         />

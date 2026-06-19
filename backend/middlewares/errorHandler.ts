@@ -28,7 +28,10 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
      return;
   }
 
-  // Fallback to 500 Internal Server Error
-  const message = process.env.NODE_ENV === 'production' ? 'Internal Server Error' : err.message || 'Something went wrong';
-  ResponseUtil.error(res, message, HTTP.INTERNAL);
+  // Fallback or custom status code
+  const statusCode = err.statusCode || HTTP.INTERNAL;
+  const message = (process.env.NODE_ENV === 'production' && statusCode === HTTP.INTERNAL) 
+    ? 'Internal Server Error' 
+    : err.message || 'Something went wrong';
+  ResponseUtil.error(res, message, statusCode);
 };

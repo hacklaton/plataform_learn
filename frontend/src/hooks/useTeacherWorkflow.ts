@@ -47,6 +47,7 @@ export function useTeacherWorkflow() {
     submitContext: submitContextMutation.mutate,
     selectTopic: (topicId: string) => updateTopicMutation.mutate({ topicId, estado: 'SELECCIONADO' }),
     discardTopic: (topicId: string) => updateTopicMutation.mutate({ topicId, estado: 'DESCARTADO' }),
+    resetTopic: (topicId: string) => updateTopicMutation.mutate({ topicId, estado: 'SUGERIDO' }),
     isUpdatingTopic: updateTopicMutation.isPending,
   };
 }

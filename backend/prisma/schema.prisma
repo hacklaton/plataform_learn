@@ -45,12 +45,18 @@ model User {
   password        String
   role            Role             @default(STUDENT)
   isActive        Boolean          @default(true)
+  // Biometric face data — stored as base64 thumbnail for comparison
+  facePhoto       String?
+  // Comma-separated pixel descriptor vector (simplified embedding for demo)
+  faceEmbedding   String?
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   adminProfile    AdminProfile?
   teacherProfile  TeacherProfile?
   studentProfile  StudentProfile?
   guardianProfile GuardianProfile?
+  attendanceRecords AttendanceRecord[]
+  biometricLogs     BiometricLog[]
 }
 
 model AdminProfile {
@@ -225,3 +231,51 @@ model Grade {
   @@index([courseId])
   @@index([teacherId])
 }
+// BIOMETRIC AND ATTENDANCE MODELS
+// ============================================================
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  TARDY
+}
+
+enum AttendanceMethod {
+  BIOMETRIC
+  MANUAL
+}
+
+enum BiometricLogStatus {
+  SUCCESS
+  UNKNOWN
+  ERROR
+}
+
+model AttendanceRecord {
+  id         String           @id @default(uuid())
+  userId     String
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  timestamp  DateTime         @default(now())
+  status     AttendanceStatus @default(PRESENT)
+  method     AttendanceMethod @default(BIOMETRIC)
+  confidence Float?
+  createdAt  DateTime         @default(now())
+
+  @@index([userId])
+}
+
+model BiometricLog {
+  id            String             @id @default(uuid())
+  userId        String?
+  user          User?              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userName      String?
+  userCode      String?
+  timestamp     DateTime           @default(now())
+  confidence    Float?
+  status        BiometricLogStatus @default(UNKNOWN)
+  capturedImage String?
+  createdAt     DateTime           @default(now())
+
+  @@index([userId])
+}
+

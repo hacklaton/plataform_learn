@@ -5,9 +5,8 @@ import {
   TopicStatus,
 } from '../interfaces/teacherWorkflow.interface.js';
 
-// TODO: Replace with a real call to the AI agent once it's ready.
-// The contract (input -> AgentWorkflowResponseDto) must stay the same so
-// the controller/repository/frontend don't need to change.
+const AGENT_URL = process.env.INTELLIGENCE_AGENT_URL ?? 'http://localhost:8000';
+
 function generateMockAgentPlan(input: TeacherContextInput) {
   return {
     planResumen: `Plan de trabajo para ${input.asignatura} (${input.curso}) alineado con los objetivos indicados por ${input.profesor}.`,
@@ -71,7 +70,24 @@ function toDto(workflow: any): AgentWorkflowResponseDto {
 
 export class TeacherWorkflowService {
   static async submitContext(teacherId: string, input: TeacherContextInput): Promise<AgentWorkflowResponseDto> {
-    const plan = generateMockAgentPlan(input);
+    let plan;
+    try {
+      const response = await fetch(`${AGENT_URL}/generate-workflow`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(input),
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Agent API returned error ${response.status}: ${errorText}`);
+      }
+
+      plan = await response.json() as any;
+    } catch (error) {
+      console.error('[TeacherWorkflowService] Error calling agent, falling back to mock plan:', error);
+      throw error;
+    }
 
     const workflow = await TeacherWorkflowRepository.create({
       teacherId,
